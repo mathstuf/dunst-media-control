@@ -57,7 +57,7 @@ function get_volume_icon {
         volume_icon="\U0001f509" # SPEAKER WITH ONE SOUND WAVE
     else
         volume_icon="\U0001f50a" # SPEAKER WITH THREE SOUND WAVES
-    fi 
+    fi
 }
 
 # Returns an emoji to use to represent microphone volume, depending on its state
@@ -93,7 +93,7 @@ function get_album_art {
     elif [[ $url == "https://"* ]] && [[ $download_album_art == "true" ]]; then
         # Identify filename from URL
         filename="$(echo $url | sed "s/.*\///")"
-        
+
         # Download file to $tmproot if it doesn't exist
         if [ ! -f "$tmproot/$filename" ]; then
             mkdir -p "$tmproot"
@@ -138,7 +138,7 @@ function show_music_notif {
 # Displays mic notification
 function show_mic_notif {
     volume=$(get_mic_volume)
-    get_mic_icon  
+    get_mic_icon
 
     notify-send -t $notification_timeout -h string:x-dunst-stack-tag:mic_volume_notif -h int:value:$volume "$mic_icon $volume%"
 }
@@ -213,7 +213,7 @@ case $1 in
     mic_up)
     # Unmutes and increases volume, then displays the notification
     pactl set-source-mute @DEFAULT_SOURCE@ 0
-    
+
     mic_volume=$(get_mic_volume)
     if [ $(( "$mic_volume" + "$mic_volume_step" )) -gt $mic_max_volume ]; then
         pactl set-source-volume @DEFAULT_SOURCE@ $mic_max_volume%
@@ -227,7 +227,7 @@ case $1 in
     # Lowers volume and displays the notification
     pactl set-source-volume @DEFAULT_SOURCE@ -$mic_volume_step%
     show_mic_notif
-    ;; 
+    ;;
 
     mic_mute)
     pactl set-source-mute @DEFAULT_SOURCE@ toggle
