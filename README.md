@@ -19,7 +19,7 @@ This is a Bash script that uses Dunst to show an indicator on the screen when th
 ## Dependancies
 
 * WirePlumber
-* [light](https://archlinux.org/packages/extra/x86_64/light/)
+* `brightnessctl`
 * dunst (`dnf install dunst` / `pacman -S dunst`)
 
 ## Installation
