@@ -15,24 +15,20 @@ show_music_in_volume_indicator=true
 
 tmproot="${XDG_RUNTIME_DIR:-${XDG_CACHE_HOME:-/tmp}}/dunst-media-control"
 
-# Uses regex to get volume from pactl
+# Uses regex to get volume from wpctl
 function get_volume {
-    pactl get-sink-volume @DEFAULT_SINK@ | grep -Po '[0-9]{1,3}(?=%)' | head -1
+    local volume
+    volume=$(wpctl get-volume "$1" | cut -d' ' -f2)
+    echo $(( volume * 100 ))
 }
 
-# Uses regex to get mute status from pactl
+# Uses regex to get mute status from wpctl
 function get_mute {
-    pactl get-sink-mute @DEFAULT_SINK@ | grep -Po '(?<=Mute: )(yes|no)'
-}
-
-# Uses regex to get mic volume from pactl
-function get_mic_volume {
-    pactl get-source-volume @DEFAULT_SOURCE@ | grep -Po '[0-9]{1,3}(?=%)' | head -1
-}
-
-# Gets mic mute status
-function get_mic_mute {
-    pactl get-source-mute @DEFAULT_SOURCE@ | grep -Po '(?<=Mute: )(yes|no)'
+    if wpctl get-volume "$1" | grep -q 'MUTED'; then
+        echo "yes"
+    else
+        echo "no"
+    fi
 }
 
 # Query `brightnessctl` for the brightness value
@@ -47,8 +43,8 @@ function get_brightness {
 
 # Returns an emoji to use to represent speaker volume, depending on its state
 function get_volume_icon {
-    volume=$(get_volume)
-    mute=$(get_mute)
+    volume=$(get_volume @DEFAULT_SINK@)
+    mute=$(get_mute @DEFAULT_SINK@)
     if [ "$mute" == "yes" ]; then
         volume_icon="\U0001f507" # SPEAKER WITH CANCELLATION STROKE
     elif [ "$volume" -eq 0 ]; then
@@ -62,7 +58,7 @@ function get_volume_icon {
 
 # Returns an emoji to use to represent microphone volume, depending on its state
 function get_mic_icon {
-    mute=$(get_mic_mute)
+    mute=$(get_mute @DEFAULT_SOURCE@)
     if [ "$mute" == "yes" ] ; then
         mic_icon="\U0001f3a4\u0338" # MICROPHONE, COMBINING LONG SOLIDUS OVERLAY
     else
@@ -108,7 +104,7 @@ function get_album_art {
 
 # Displays a volume notification
 function show_volume_notif {
-    volume=$(get_mute)
+    volume=$(get_mute @DEFAULT_SINK@)
     get_volume_icon
 
     if [[ $show_music_in_volume_indicator == "true" ]]; then
@@ -137,7 +133,7 @@ function show_music_notif {
 
 # Displays mic notification
 function show_mic_notif {
-    volume=$(get_mic_volume)
+    volume=$(get_volume @DEFAULT_SOURCE@)
     get_mic_icon
 
     notify-send -t $notification_timeout -h string:x-dunst-stack-tag:mic_volume_notif -h int:value:$volume "$mic_icon $volume%"
@@ -155,25 +151,25 @@ case $1 in
     # Volume =============================================================
     volume_up)
     # Unmutes and increases volume, then displays the notification
-    pactl set-sink-mute @DEFAULT_SINK@ 0
-    volume=$(get_volume)
+    wpctl set-mute @DEFAULT_SINK@ 0
+    volume=$(get_volume @DEFAULT_SINK@)
     if [ $(( "$volume" + "$volume_step" )) -gt $max_volume ]; then
-        pactl set-sink-volume @DEFAULT_SINK@ $max_volume%
+        wpctl set-volume @DEFAULT_SINK@ $max_volume%
     else
-        pactl set-sink-volume @DEFAULT_SINK@ +$volume_step%
+        wpctl set-volume @DEFAULT_SINK@ +$volume_step%
     fi
     show_volume_notif
     ;;
 
     volume_down)
     # Lowers volume and displays the notification
-    pactl set-sink-volume @DEFAULT_SINK@ -$volume_step%
+    wpctl set-volume @DEFAULT_SINK@ -$volume_step%
     show_volume_notif
     ;;
 
     volume_mute)
     # Toggles mute and displays the notification
-    pactl set-sink-mute @DEFAULT_SINK@ toggle
+    wpctl set-mute @DEFAULT_SINK@ toggle
     show_volume_notif
     ;;
 
@@ -212,25 +208,25 @@ case $1 in
     # Microphone =========================================================
     mic_up)
     # Unmutes and increases volume, then displays the notification
-    pactl set-source-mute @DEFAULT_SOURCE@ 0
+    wpctl set-mute @DEFAULT_SOURCE@ 0
 
-    mic_volume=$(get_mic_volume)
+    mic_volume=$(get_volume @DEFAULT_SOURCE@)
     if [ $(( "$mic_volume" + "$mic_volume_step" )) -gt $mic_max_volume ]; then
-        pactl set-source-volume @DEFAULT_SOURCE@ $mic_max_volume%
+        wpctl set-volume @DEFAULT_SOURCE@ $mic_max_volume%
     else
-        pactl set-source-volume @DEFAULT_SOURCE@ +$mic_volume_step%
+        wpctl set-volume @DEFAULT_SOURCE@ +$mic_volume_step%
     fi
     show_mic_notif
     ;;
 
     mic_down)
     # Lowers volume and displays the notification
-    pactl set-source-volume @DEFAULT_SOURCE@ -$mic_volume_step%
+    wpctl set-volume @DEFAULT_SOURCE@ -$mic_volume_step%
     show_mic_notif
     ;;
 
     mic_mute)
-    pactl set-source-mute @DEFAULT_SOURCE@ toggle
+    wpctl set-source-mute @DEFAULT_SOURCE@ toggle
     show_mic_notif
     ;;
 esac
